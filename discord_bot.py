@@ -13,11 +13,45 @@ from database import get_temp_connection, initialize_tables, over_write_old_DB
 from scraper import Scraper
 from dotenv import load_dotenv
 from colorama import Back, Fore, Style
+from discord import app_commands, Interaction
+import logging
 
 
 load_dotenv()
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+
+ADMIN_IDS = os.getenv("ADMIN_IDS", "").split(",")
+ADMIN_IDS = [int(admin_id) for admin_id in ADMIN_IDS]
+
 client = commands.Bot(command_prefix='%', intents=discord.Intents.all())
+def is_admin():
+    async def predicate(interaction: discord.Interaction):
+        if interaction.user.id not in ADMIN_IDS:
+            # Log unauthorized attempt
+            logging.warning(
+                f"Unauthorized admin command attempt by {interaction.user} (ID: {interaction.user.id}) on command '{interaction.command.name}'"
+            )
+            raise app_commands.CheckFailure("User is not an admin.")  # Raise error only
+        return True
+    return app_commands.check(predicate)
+
+
+@client.tree.error
+async def on_app_command_error(interaction: discord.Interaction, error):
+    if isinstance(error, app_commands.CheckFailure):
+        # Avoid sending another response if one has already been sent
+        if not interaction.response.is_done():
+            await interaction.response.send_message("You do not have permission to use this command. Contact @amart if the bot is out of date", ephemeral=True)
+
+    else:
+        # Log unexpected errors, but prevent duplicate responses
+        logging.error(f"Unexpected error in command '{interaction.command.name}': {error}")
+
+        if not interaction.response.is_done():
+            await interaction.response.send_message("⚠ An unexpected error occurred.", ephemeral=True)
+
 
 async def perform_scrape():
     print("Starting to scrape...this may take a moment.")
@@ -83,6 +117,7 @@ def get_free_floors(building, floor, day):
     return free_times
 
 @client.tree.command(name="scrape", description="Scrape Global Search and Update DB")
+@is_admin()
 async def scrape(interaction: discord.Interaction):
     await interaction.response.send_message('Starting to scrape...this may take a moment.')
     await perform_scrape()  # Call the separate scraping function

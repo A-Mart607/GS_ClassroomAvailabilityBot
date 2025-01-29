@@ -2,6 +2,7 @@ from posixpath import split
 import aiohttp
 import asyncio
 import aiosqlite
+import random
 import requests
 from bs4 import BeautifulSoup
 import time
@@ -30,8 +31,8 @@ class Scraper:
         self.college_payload = {
             'selectedInstName': 'Queens College | ',
             'inst_selection': 'QNS01',
-            'selectedTermName': '2024 Fall Term',
-            'term_value': '1249',
+            'selectedTermName': '2025 Spring Term',
+            'term_value': '1252',
             'next_btn': 'Next'
         }
 
@@ -99,9 +100,13 @@ class Scraper:
                 for classname in classes:
                     sections = classname.findAll('tbody')
                     for section in sections:
+                        # not a part of schedule
+                        if 'Winter' in section.find('td', attrs={'data-label': 'Section'}).get_text():
+                            print(section.find('td', attrs={'data-label': 'Section'}).get_text())
+                            continue
                         my_classes['times'] = [line.strip() for time in section.find_all('td', attrs={'data-label': 'DaysAndTimes'}) for line in time.stripped_strings]
                         my_classes['rooms'] = [line.strip() for room in section.find_all('td', attrs={'data-label': 'Room'}) for line in room.stripped_strings]
-                        await self.split_data(my_classes)
+                        await self.split_and_push_data(my_classes)
 
 
     def update_payload(self, subjectName, subjectCode, graduateLevel, graduateCode) -> None:
@@ -115,10 +120,13 @@ class Scraper:
 
         for major in majorList:
             await self.get_class_schedule(major, 'Undergraduate', 'UGRD')
+            await asyncio.sleep(random.uniform(1, 3)) # does this actually make me look less sus? who knows
+
             await self.get_class_schedule(major, 'Graduate', 'GRAD')
+            await asyncio.sleep(random.uniform(1, 3))
 
 
-    async def split_data(self, class_info):
+    async def split_and_push_data(self, class_info):
         # example {'time': ['MoWe 10:45AM - 12:00PM', 'MoWe 10:45AM - 12:00PM'], 'room': ['Kiely Hall 150', 'Kiely Hall 150']}
         days = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
         for i, room in enumerate(class_info['rooms']):
@@ -154,17 +162,18 @@ class Scraper:
         await insertRoom(conn, (building, floor, room_num))
         await insertTime(conn, (building, floor, room_num), (day,start_time, end_time))
 
-
-        print(
-            f""" 
-                Building: {building} 
-                Floor number: {floor} 
-                Room Num: {room_num} 
-                Day: {day} 
-                Start_Time: {start_time} 
-                End_Time: {end_time}
-            """
-        )
+        def debug_print():
+            print(
+                f""" 
+                    Building: {building} 
+                    Floor number: {floor} 
+                    Room Num: {room_num} 
+                    Day: {day} 
+                    Start_Time: {start_time} 
+                    End_Time: {end_time}
+                """
+            )
+        # debug_print()
         await conn.close()
 if __name__ == "__main__":
     asyncio.run(main())
