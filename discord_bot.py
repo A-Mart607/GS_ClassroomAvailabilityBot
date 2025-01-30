@@ -190,7 +190,6 @@ def get_free_room(building, room, day):
         curr_time = max(curr_time, end_time)
     if curr_time < day_end:
         free_times.append(f"{curr_time.strftime('%H:%M')} - {day_end.strftime('%H:%M')}")
-    print('hi')
     conn.close()
     return free_times
 
