@@ -12,7 +12,7 @@ from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from src.database import get_temp_connection, initialize_tables, over_write_old_DB
+from database import get_temp_connection, initialize_tables, over_write_old_DB
 from scraper import Scraper
 
 load_dotenv()
