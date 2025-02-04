@@ -6,7 +6,7 @@ from datetime import datetime
 import aiohttp
 from bs4 import BeautifulSoup
 
-from src.database import initialize_tables, get_temp_connection, insertTime, insertRoom, over_write_old_DB
+from database import initialize_tables, get_temp_connection, insertTime, insertRoom, over_write_old_DB
 
 
 async def main():
