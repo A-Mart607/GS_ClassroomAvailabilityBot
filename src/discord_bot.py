@@ -12,7 +12,7 @@ from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from database import get_temp_connection, initialize_tables, over_write_old_DB
+from src.database import get_temp_connection, initialize_tables, over_write_old_DB
 from scraper import Scraper
 
 load_dotenv()
@@ -74,7 +74,7 @@ async def perform_scrape():
 
 def get_free_floors(building, floor, day, min_free_time):
 
-    conn = sqlite3.connect('class_time_DB.db')
+    conn = sqlite3.connect('../class_time_DB.db')
     cursor = conn.cursor()
     cursor.execute("""
         SELECT room, start_time, end_time 
@@ -122,7 +122,7 @@ async def scrape(interaction: discord.Interaction):
     await interaction.followup.send("Scraping completed.")
 
 def check_DB():
-    return os.path.exists('class_time_DB.db')
+    return os.path.exists('../class_time_DB.db')
 
 
 def parse_time_input(time_str: str) -> int:
@@ -182,7 +182,7 @@ async def free_floors(interaction: discord.Interaction, building: str, floor: in
 
 def get_free_room(building, room, day, min_free_time):
 
-    conn = sqlite3.connect('class_time_DB.db')
+    conn = sqlite3.connect('../class_time_DB.db')
     cursor = conn.cursor()
     cursor.execute("""
         SELECT room, start_time, end_time 
@@ -273,7 +273,7 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
-    if os.path.exists('class_time_DB.db'):
+    if os.path.exists('../class_time_DB.db'):
         print('DB Exists')
     else:
         await perform_scrape()
