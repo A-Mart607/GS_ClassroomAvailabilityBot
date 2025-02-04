@@ -1,12 +1,11 @@
-from posixpath import split
-import aiohttp
 import asyncio
-import aiosqlite
 import random
-import requests
-from bs4 import BeautifulSoup
 import time
 from datetime import datetime
+
+import aiohttp
+from bs4 import BeautifulSoup
+
 from database import initialize_tables, get_temp_connection, insertTime, insertRoom, over_write_old_DB
 
 

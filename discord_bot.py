@@ -1,21 +1,19 @@
+import logging
 import os
+import platform
+import re
 import sqlite3
-from collections import defaultdict
-from sqlite3.dbapi2 import sqlite_version_info
-
-import discord
-import asyncio
 import time
 from datetime import datetime
-import platform
+
+import discord
+from colorama import Back, Fore, Style
+from discord import app_commands
 from discord.ext import commands
+from dotenv import load_dotenv
+
 from database import get_temp_connection, initialize_tables, over_write_old_DB
 from scraper import Scraper
-from dotenv import load_dotenv
-from colorama import Back, Fore, Style
-from discord import app_commands, Interaction
-import logging
-
 
 load_dotenv()
 
@@ -74,7 +72,7 @@ async def perform_scrape():
     elapsed_time = end_time - start_time
     print(f"Scraping completed in {elapsed_time:.2f} seconds.")
 
-def get_free_floors(building, floor, day):
+def get_free_floors(building, floor, day, min_free_time):
 
     conn = sqlite3.connect('class_time_DB.db')
     cursor = conn.cursor()
@@ -99,18 +97,18 @@ def get_free_floors(building, floor, day):
         current_time = day_start
 
         # Filter occupied times for this specific room
-        room_times = [(start, end) for r, start, end in occupied_times if r == room]
+        room_times = sorted([(start, end) for r, start, end in occupied_times if r == room])
 
         for start, end in room_times:
             start_time = datetime.strptime(start, "%H:%M")
             end_time = datetime.strptime(end, "%H:%M")
 
-            if current_time < start_time:
+            if current_time < start_time and (start_time - current_time).total_seconds() / 60 >= min_free_time:
                 free_times[room].append(f"{current_time.strftime('%H:%M')} - {start_time.strftime('%H:%M')}")
             current_time = max(current_time, end_time)
 
         # Check for any remaining free time until the end of the day
-        if current_time < day_end:
+        if current_time < day_end and (day_end - current_time).total_seconds() / 60 >= min_free_time:
             free_times[room].append(f"{current_time.strftime('%H:%M')} - {day_end.strftime('%H:%M')}")
 
     conn.close()
@@ -126,14 +124,37 @@ async def scrape(interaction: discord.Interaction):
 def check_DB():
     return os.path.exists('class_time_DB.db')
 
+
+def parse_time_input(time_str: str) -> int:
+    """
+    Converts a time string like '1h30m', '1h 30m', '70m', '3h' into total minutes.
+    Returns the number of minutes as an integer.
+    """
+    time_str = time_str.lower().replace(" ", "")  # Normalize input (remove spaces & lowercase)
+    pattern = re.compile(r"(?:(\d+)h)?(?:(\d+)m)?")  # Match hours and minutes
+
+    match = pattern.fullmatch(time_str)
+    if not match:
+        raise ValueError("Invalid time format. Use formats like '1h30m', '1h 30m', '70m', '3h'.")
+
+    hours = int(match.group(1)) if match.group(1) else 0
+    minutes = int(match.group(2)) if match.group(2) else 0
+
+    return hours * 60 + minutes
+
 @client.tree.command(name="get_floor_times", description="Get free times for any floor in any building")
-async def free_floors(interaction: discord.Interaction, building: str, floor: int, day: str):
+async def free_floors(interaction: discord.Interaction, building: str, floor: int, day: str, min_free_time: str = '30m'):
     if not check_DB():
         await interaction.response.send_message("Database not initliazed yet!, try scraping or waiting :)")
         return
 
     try:
-        free_slots = get_free_floors(building, floor, day)
+        min_free_time = parse_time_input(min_free_time)
+    except ValueError as e:
+        await interaction.response.send_message(str(e))
+
+    try:
+        free_slots = get_free_floors(building, floor, day, min_free_time)
         if free_slots:
             print(f"Success on finding classes for {building, floor, day}: {free_slots}")
 
@@ -159,7 +180,7 @@ async def free_floors(interaction: discord.Interaction, building: str, floor: in
     except Exception as e:
         await interaction.response.send_message(f"An error occurred: {str(e)}")
 
-def get_free_room(building, room, day):
+def get_free_room(building, room, day, min_free_time):
 
     conn = sqlite3.connect('class_time_DB.db')
     cursor = conn.cursor()
@@ -181,25 +202,32 @@ def get_free_room(building, room, day):
     if not occupied_times:
         return []
 
-    for room, start, end in occupied_times:
+    for room, start, end in sorted(occupied_times):
         start_time = datetime.strptime(start, "%H:%M")
         end_time = datetime.strptime(end, "%H:%M")
 
-        if curr_time < start_time:
+        if curr_time < start_time and (start_time - curr_time).total_seconds() /60 >= min_free_time:
             free_times.append(f"{curr_time.strftime('%H:%M')} - {start_time.strftime('%H:%M')}")
         curr_time = max(curr_time, end_time)
-    if curr_time < day_end:
+
+    if curr_time < day_end and (day_end - curr_time).total_seconds() / 60 >= min_free_time:
         free_times.append(f"{curr_time.strftime('%H:%M')} - {day_end.strftime('%H:%M')}")
     conn.close()
     return free_times
 
 @client.tree.command(name="get_room_time", description="Get free times for any individual room in any building")
-async def free_room(interaction: discord.Interaction, building: str, room: str, day: str):
+async def free_room(interaction: discord.Interaction, building: str, room: str, day: str, min_free_time : str = '30m'):
     if not check_DB():
         interaction.response.send_message("Database not initliazed yet!, try scraping or waiting :)")
         return
+
     try:
-        free_slots = get_free_room(building, room, day)
+        min_free_time = parse_time_input(min_free_time)
+    except ValueError as e:
+        await interaction.response.send_message(str(e))
+    print(min_free_time)
+    try:
+        free_slots = get_free_room(building, room, day, min_free_time)
         if free_slots:
             print(f"Success on finding classes {free_slots}")
             embed = discord.Embed(
