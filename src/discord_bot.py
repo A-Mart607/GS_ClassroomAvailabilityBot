@@ -215,6 +215,34 @@ def get_free_room(building, room, day, min_free_time):
     conn.close()
     return free_times
 
+@client.tree.command(name="help", description="Get help with the bot")
+async def help(interaction: discord.Interaction):
+    embed = discord.Embed(
+        title="🏫 Classroom Availability Bot Help",
+        description="Find free classrooms at Queens College",
+        color=discord.Color.blue()
+    )
+    
+    embed.add_field(
+        name="📅 Commands",
+        value="`/get_floor_times` - Schedule for entire floor\n`/get_room_time` - Schedule for specific room",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🏢 Buildings",
+        value="Campbell, Colwin, Delany, G Building, Gymnasium, Honors, I Building, Kiely Hall, King Hall, Kissena, Klapper, Music, Powdermker, QueensHall, Rathaus, Remsen, Rosenthal, Science",
+        inline=False
+    )
+    
+    embed.add_field(
+        name="📆 Days",
+        value="Mo (Monday), Tu (Tuesday), We (Wednesday), Th (Thursday), Fri (Friday)",
+        inline=False
+    )
+    
+    await interaction.response.send_message(embed=embed)
+
 @client.tree.command(name="get_room_time", description="Get free times for any individual room in any building")
 async def free_room(interaction: discord.Interaction, building: str, room: str, day: str, min_free_time : str = '30m'):
     if not check_DB():
