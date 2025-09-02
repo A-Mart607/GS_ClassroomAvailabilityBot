@@ -30,8 +30,8 @@ class Scraper:
         self.college_payload = {
             'selectedInstName': 'Queens College | ',
             'inst_selection': 'QNS01',
-            'selectedTermName': '2025 Spring Term',
-            'term_value': '1252',
+            'selectedTermName': '2025 Fall Term',
+            'term_value': '1259',
             'next_btn': 'Next'
         }
 
