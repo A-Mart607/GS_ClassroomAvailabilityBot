@@ -261,7 +261,4 @@ async def on_ready():
 
 
 
-#client.run(os.getenv("TOKEN2"))
-
-# dev version
-client.run(os.getenv("TEST_TOKEN"))
+client.run(os.getenv("TOKEN2"))
