@@ -117,8 +117,13 @@ async def free_floors(interaction: discord.Interaction, building: str, floor: in
             }
             async with session.get(f'{API_BASE_URL}/get_free_floors', params=params) as response:
                 if response.status != 200:
-                    await interaction.response.send_message(f"API request failed with status code {response.status}")
-                    return
+                    try:
+                        error_json = await response.json()
+                        error_message = await error_json.get('error', 'Unknown Error')
+                    except Exception:
+                        error_message = await response.text()
+                    raise RuntimeError(error_message)
+
                 free_slots = await response.json()
 
                 if free_slots:
@@ -181,6 +186,7 @@ async def free_room(interaction: discord.Interaction, building: str, room: str, 
         min_free_time = parse_time_input(min_free_time)
     except ValueError as e:
         await interaction.response.send_message(str(e))
+        return
 
     try:
 
@@ -193,8 +199,13 @@ async def free_room(interaction: discord.Interaction, building: str, room: str, 
             }
             async with session.get(f'{API_BASE_URL}/get_free_room', params=params) as response:
                 if response.status != 200:
-                    await interaction.response.send_message(f"API request failed with status code {response.status}")
-                    return
+                    try:
+                        error_json = await response.json()
+                        error_message = await error_json.get('error', 'Unknown Error')
+                    except Exception:
+                        error_message = await response.text()
+                    raise RuntimeError(error_message)
+
                 free_slots = await response.json()
 
                 if free_slots:

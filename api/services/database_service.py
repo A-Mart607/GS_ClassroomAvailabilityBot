@@ -1,6 +1,5 @@
 
 import sqlite3
-from datetime import datetime
 import os
 
 
@@ -28,6 +27,21 @@ class DatabaseService:
         print(f"Connecting to: {self.db_path}")
         conn = sqlite3.connect(self.db_path)
         return conn
+
+    def check_room_exists(self, building, room):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT 1 
+            FROM classrooms 
+            WHERE building = ? AND room = ? 
+            LIMIT 1
+        """, (building, room))
+
+        exists = cursor.fetchone() is not None
+        conn.close()
+        return exists
 
     def get_free_floors(self, building, floor, day):
         conn = self.get_connection()

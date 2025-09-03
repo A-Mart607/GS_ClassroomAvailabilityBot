@@ -1,4 +1,4 @@
-VALID_DAYS = {'mo', 'tu', 'we', 'th', 'fr', 'sa', 'su'}
+VALID_DAYS = ['mo', 'tu', 'we', 'th', 'fr', 'sa', 'su']
 
 # could pull from db but hardcoded for simplicity
 VALID_BUILDINGS = {
