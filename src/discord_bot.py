@@ -74,50 +74,6 @@ async def perform_scrape():
     elapsed_time = end_time - start_time
     print(f"Scraping completed in {elapsed_time:.2f} seconds.")
 
-
-#todo: delete
-"""def get_free_floors(building, floor, day, min_free_time):
-
-    conn = sqlite3.connect('../class_time_DB.db')
-    cursor = conn.cursor()
-    cursor.execute("""
-"""        SELECT room, start_time, end_time 
-        FROM times 
-        WHERE building = ? AND floor = ? AND day = ? 
-        ORDER BY room, start_time"""
-""", (building, floor, day))
-
-    occupied_times = cursor.fetchall()
-    print(f" raw DB: {occupied_times}")
-    # day starts at 7 AM and ends at 10 PM
-    day_start = datetime.strptime("07:00", "%H:%M")
-    day_end = datetime.strptime("22:00", "%H:%M")
-
-    # room : [] times
-    free_times = dict()
-
-    for room in set(room for room, _, _ in occupied_times):
-        free_times[room] = []
-        current_time = day_start
-
-        # Filter occupied times for this specific room
-        room_times = sorted([(start, end) for r, start, end in occupied_times if r == room])
-
-        for start, end in room_times:
-            start_time = datetime.strptime(start, "%H:%M")
-            end_time = datetime.strptime(end, "%H:%M")
-
-            if current_time < start_time and (start_time - current_time).total_seconds() / 60 >= min_free_time:
-                free_times[room].append(f"{current_time.strftime('%H:%M')} - {start_time.strftime('%H:%M')}")
-            current_time = max(current_time, end_time)
-
-        # Check for any remaining free time until the end of the day
-        if current_time < day_end and (day_end - current_time).total_seconds() / 60 >= min_free_time:
-            free_times[room].append(f"{current_time.strftime('%H:%M')} - {day_end.strftime('%H:%M')}")
-
-    conn.close()
-    return free_times"""
-
 @client.tree.command(name="scrape", description="Scrape Global Search and Update DB")
 @is_admin()
 async def scrape(interaction: discord.Interaction):
@@ -195,41 +151,6 @@ async def free_floors(interaction: discord.Interaction, building: str, floor: in
     except Exception as e:
         await interaction.response.send_message(f"An error occurred: {str(e)}")
 
-def get_free_room(building, room, day, min_free_time):
-
-    conn = sqlite3.connect('../class_time_DB.db')
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT room, start_time, end_time 
-        FROM times 
-        WHERE building = ? AND room = ? AND day = ? 
-        ORDER BY room, start_time
-    """, (building, room, day))
-
-    occupied_times = cursor.fetchall()
-    print(f" raw DB for {building, room, day}: {occupied_times}")
-
-    free_times = []
-    day_start = datetime.strptime("07:00", "%H:%M")
-    day_end = datetime.strptime("22:00", "%H:%M")
-    curr_time = day_start
-
-    if not occupied_times:
-        return []
-
-    for room, start, end in sorted(occupied_times):
-        start_time = datetime.strptime(start, "%H:%M")
-        end_time = datetime.strptime(end, "%H:%M")
-
-        if curr_time < start_time and (start_time - curr_time).total_seconds() /60 >= min_free_time:
-            free_times.append(f"{curr_time.strftime('%H:%M')} - {start_time.strftime('%H:%M')}")
-        curr_time = max(curr_time, end_time)
-
-    if curr_time < day_end and (day_end - curr_time).total_seconds() / 60 >= min_free_time:
-        free_times.append(f"{curr_time.strftime('%H:%M')} - {day_end.strftime('%H:%M')}")
-    conn.close()
-    return free_times
-
 @client.tree.command(name="help", description="Get help with the bot")
 async def help(interaction: discord.Interaction):
     embed = discord.Embed(
@@ -263,32 +184,45 @@ async def free_room(interaction: discord.Interaction, building: str, room: str, 
     if not check_DB():
         interaction.response.send_message("Database not initliazed yet!, try scraping or waiting :)")
         return
-
     try:
         min_free_time = parse_time_input(min_free_time)
     except ValueError as e:
         await interaction.response.send_message(str(e))
-    print(min_free_time)
+
     try:
-        free_slots = get_free_room(building, room, day, min_free_time)
-        if free_slots:
-            print(f"Success on finding classes {free_slots}")
-            embed = discord.Embed(
-                title = f"Free times for {building} {room} on {day}",
-                color=discord.Color.blue()
-            )
-            # Convert each time slot to standard AM/PM format
-            converted_slots = [
-                f"{convert_to_standard_time(start)} - {convert_to_standard_time(end)}"
-                for start, end in (slot.split(" - ") for slot in free_slots)
-            ]
-            print(converted_slots)
 
-            embed.add_field(name='Available Times', value= "\n".join(converted_slots))
-            await interaction.response.send_message(embed=embed)
+        async with aiohttp.ClientSession() as session:
+            params = {
+                'building': building,
+                'room': room,
+                'day': day,
+                'min_free_time': min_free_time
+            }
+            async with session.get(f'{API_BASE_URL}/get_free_room', params=params) as response:
+                if response.status != 200:
+                    await interaction.response.send_message(f"API request failed with status code {response.status}")
+                    return
+                free_slots = await response.json()
 
-        else:
-            await interaction.response.send_message(f"""Couldn't find free time for this room. Either the room number is wrong or the room is completly free today!""")
+                if free_slots:
+                    print(f"Success on finding classes for {building, room, day}: {free_slots}")
+
+                    embed = discord.Embed(
+                        title=f"Free Times for {building} {room} on {day}",
+                        color=discord.Color.blue()
+                    )
+
+                    # Convert each time slot to standard AM/PM format
+                    converted_slots = [
+                        f"{convert_to_standard_time(start)} - {convert_to_standard_time(end)}"
+                        for start, end in (slot.split(" - ") for slot in free_slots)
+                    ]
+                    print(converted_slots)
+
+                    embed.add_field(name='Available Times', value= "\n".join(converted_slots))
+                    await interaction.response.send_message(embed=embed)
+                else:
+                    await interaction.response.send_message(f"""Couldn't find free time for this room with this minimum time. Either the room number is wrong or the room is completly free today!""")
 
     except Exception as e:
         await interaction.response.send_message(f"An error occurred: {str(e)}")

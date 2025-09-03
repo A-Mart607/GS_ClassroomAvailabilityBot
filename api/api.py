@@ -21,11 +21,22 @@ def get_free_floors():
     min_free_time = int(request.args.get('min_free_time'))
 
     time_table = db_service.get_free_floors(building, floor, day)
-    free_times = schedule_service.get_schedule_inverse(time_table, min_free_time)
+    free_times = schedule_service.get_schedule_floor_inverse(time_table, min_free_time)
 
     return free_times
 
+@app.route('/get_free_room', methods=['GET'])
+def get_free_room():
+    building = request.args.get('building')
+    room = request.args.get('room')
+    day = request.args.get('day')
+    min_free_time = int(request.args.get('min_free_time'))
 
+
+    time_table = db_service.get_free_room(building, room, day)
+    free_times = schedule_service.get_schedule_room_inverse(time_table, min_free_time)
+
+    return free_times
 
 if __name__ == '__main__':
     app.run(debug=True)

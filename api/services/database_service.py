@@ -47,3 +47,20 @@ class DatabaseService:
 
         conn.close()
         return occupied_times
+
+    def get_free_room(self, building, room, day):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT room, start_time, end_time 
+            FROM times 
+            WHERE building = ? AND room = ? AND day = ? 
+            ORDER BY room, start_time
+        """, (building, room, day))
+
+        occupied_times = cursor.fetchall()
+        print(f" raw DB for {building, room, day}: {occupied_times}")
+
+        conn.close()
+        return occupied_times
