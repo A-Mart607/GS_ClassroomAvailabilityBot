@@ -127,21 +127,23 @@ class Scraper:
 
     async def split_and_push_data(self, class_info):
         # example {'time': ['MoWe 10:45AM - 12:00PM', 'MoWe 10:45AM - 12:00PM'], 'room': ['Kiely Hall 150', 'Kiely Hall 150']}
-        days = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+        scraped_days = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+
         for i, room in enumerate(class_info['rooms']):
             if room in ['Online-Asynchronous', 'TBA', 'Off-Campus', 'Online-Synchronous', 'Soccer Field']:
                 continue
             building, room_num, floor = self.parse_room(room)
             times = class_info['times'][i].split()
-            for day in days:
-                if times[0].find(day) != -1:
-                    await self.db_push(building, room_num, floor, day, times[-3], times[-1])
+            for scraped_day in scraped_days:
+                if times[0].find(scraped_day) != -1:
+                    await self.db_push(building, room_num, floor, scraped_day.lower(), times[-3], times[-1])
 
     def parse_room(self, room):
         room = room.split()
-        building = ' '.join(room[:-1])
+        building = ' '.join(room[:-1]).lower()
+        room_num = room[-1].lower()
         floor = int(room[-1][0]) if not room[-1][0].isalpha() else int(room[-1][1])
-        room_num = room[-1]
+
         return building, room_num, floor
 
     def convert_to_military_time(self, start_time, end_time):
@@ -155,6 +157,8 @@ class Scraper:
 
 
     async def db_push(self, building, room_num, floor, day, start_time, end_time):
+        # should already be lowercase from parse_room
+
         building = ''.join(building)
         start_time, end_time = self.convert_to_military_time(start_time, end_time)
         conn = await get_temp_connection()
@@ -172,7 +176,7 @@ class Scraper:
                     End_Time: {end_time}
                 """
             )
-        # debug_print()
+        debug_print()
         await conn.close()
 if __name__ == "__main__":
     asyncio.run(main())

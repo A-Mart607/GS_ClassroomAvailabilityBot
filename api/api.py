@@ -15,9 +15,9 @@ schedule_service = ScheduleService()
 @app.route('/get_free_floors', methods=['GET'])
 def get_free_floors():
 
-    building = request.args.get('building')
+    building = request.args.get('building').lower()
     floor = int(request.args.get('floor'))
-    day = request.args.get('day')
+    day = request.args.get('day').lower()
     min_free_time = int(request.args.get('min_free_time'))
 
     time_table = db_service.get_free_floors(building, floor, day)
@@ -27,9 +27,9 @@ def get_free_floors():
 
 @app.route('/get_free_room', methods=['GET'])
 def get_free_room():
-    building = request.args.get('building')
-    room = request.args.get('room')
-    day = request.args.get('day')
+    building = request.args.get('building').lower()
+    room = request.args.get('room').lower()
+    day = request.args.get('day').lower()
     min_free_time = int(request.args.get('min_free_time'))
 
 

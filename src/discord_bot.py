@@ -81,10 +81,6 @@ async def scrape(interaction: discord.Interaction):
     await perform_scrape()  # Call the separate scraping function
     await interaction.followup.send("Scraping completed.")
 
-def check_DB():
-    return os.path.exists('../class_time_DB.db')
-
-
 def parse_time_input(time_str: str) -> int:
     """
     Converts a time string like '1h30m', '1h 30m', '70m', '3h' into total minutes.
@@ -129,7 +125,7 @@ async def free_floors(interaction: discord.Interaction, building: str, floor: in
                     print(f"Success on finding classes for {building, floor, day}: {free_slots}")
 
                     embed = discord.Embed(
-                        title=f"Free Times for {building} Floor {floor} on {day}",
+                        title=f"Free Times for {building.title()} Floor {floor} on {day.capitalize()}",
                         color=discord.Color.blue()
                     )
 
@@ -180,9 +176,7 @@ async def help(interaction: discord.Interaction):
 
 @client.tree.command(name="get_room_time", description="Get free times for any individual room in any building")
 async def free_room(interaction: discord.Interaction, building: str, room: str, day: str, min_free_time : str = '30m'):
-    if not check_DB():
-        interaction.response.send_message("Database not initliazed yet!, try scraping or waiting :)")
-        return
+
     try:
         min_free_time = parse_time_input(min_free_time)
     except ValueError as e:
@@ -207,7 +201,7 @@ async def free_room(interaction: discord.Interaction, building: str, room: str, 
                     print(f"Success on finding classes for {building, room, day}: {free_slots}")
 
                     embed = discord.Embed(
-                        title=f"Free Times for {building} {room} on {day}",
+                        title=f"Free Times for {building.title()} {room.upper()} on {day.capitalize()}",
                         color=discord.Color.blue()
                     )
 
