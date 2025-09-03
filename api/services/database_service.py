@@ -23,8 +23,7 @@ class DatabaseService:
 
     def get_connection(self):
         if not self.check_DB():
-            # raise FileNotFoundError(f"Database file not found at {self.db_path}. Please run the scraper to create the database.")
-            pass
+            raise FileNotFoundError(f"Database file not found at {self.db_path}. Please run the scraper to create the database.")
 
         print(f"Connecting to: {self.db_path}")
         conn = sqlite3.connect(self.db_path)

@@ -102,7 +102,6 @@ def parse_time_input(time_str: str) -> int:
 
     return hours * 60 + minutes
 
-# todo: have a create inverse schedule function to use across both functions
 
 @client.tree.command(name="get_floor_times", description="Get free times for any floor in any building")
 async def free_floors(interaction: discord.Interaction, building: str, floor: int, day: str, min_free_time: str = '30m'):
