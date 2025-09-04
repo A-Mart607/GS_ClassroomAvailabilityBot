@@ -52,4 +52,4 @@ def get_free_room():
     return jsonify(free_times)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host="127.0.0.1", port=5001,debug=True)

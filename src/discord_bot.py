@@ -1,18 +1,18 @@
+import enum
+
 import aiohttp
 import logging
 import os
 import platform
 import re
-import sqlite3
 import time
 from datetime import datetime
 
 import discord
 from colorama import Back, Fore, Style
-from discord import app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
-
+from discord import app_commands
 from database import get_temp_connection, initialize_tables, over_write_old_DB
 from scraper import Scraper
 
@@ -20,10 +20,38 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+class ValidBuildings(enum.Enum):
+    Campbell = "campbell"
+    Colwin = "colwin"
+    Delany = "delany"
+    G_Building = "g building"
+    Gymnasium = "gymnasium"
+    Honors = "honors"
+    I_Building = "i building"
+    Kiely_Hall = "kiely hall"
+    King_Hall = "king hall"
+    Kissena = "kissena"
+    Klapper = "klapper"
+    Music = "music"
+    Powdermker = "powdermker"
+    Queenshall = "queenshall"
+    Rathaus = "rathaus"
+    Remsen = "remsen"
+    Rosenthal = "rosenthal"
+    Science = "science"
+
+class ValidDays(enum.Enum):
+    Mo = "mo"
+    Tu = "tu"
+    We = "we"
+    Th = "th"
+    Fr = "fr"
+    Sa = "sa"
+    Su = "su"
 
 ADMIN_IDS = os.getenv("ADMIN_IDS", "").split(",")
 ADMIN_IDS = [int(admin_id) for admin_id in ADMIN_IDS]
-API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:5000')
+API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:5001')
 
 client = commands.Bot(command_prefix='%', intents=discord.Intents.all())
 def is_admin():
@@ -100,7 +128,7 @@ def parse_time_input(time_str: str) -> int:
 
 
 @client.tree.command(name="get_floor_times", description="Get free times for any floor in any building")
-async def free_floors(interaction: discord.Interaction, building: str, floor: int, day: str, min_free_time: str = '30m'):
+async def free_floors(interaction: discord.Interaction, building: ValidBuildings, floor: int, day: ValidDays, min_free_time: str = '30m'):
 
     try:
         min_free_time = parse_time_input(min_free_time)
@@ -110,9 +138,9 @@ async def free_floors(interaction: discord.Interaction, building: str, floor: in
     try:
         async with aiohttp.ClientSession() as session:
             params = {
-                'building': building,
+                'building': building.value,
                 'floor': floor,
-                'day': day,
+                'day': day.value,
                 'min_free_time': min_free_time
             }
             async with session.get(f'{API_BASE_URL}/get_free_floors', params=params) as response:
@@ -127,10 +155,10 @@ async def free_floors(interaction: discord.Interaction, building: str, floor: in
                 free_slots = await response.json()
 
                 if free_slots:
-                    print(f"Success on finding classes for {building, floor, day}: {free_slots}")
+                    print(f"Success on finding classes for {building.name, floor, day.name}: {free_slots}")
 
                     embed = discord.Embed(
-                        title=f"Free Times for {building.title()} Floor {floor} on {day.capitalize()}",
+                        title=f"Free Times for {building.value.title()} Floor {floor} on {day.name}",
                         color=discord.Color.blue()
                     )
 
@@ -146,7 +174,7 @@ async def free_floors(interaction: discord.Interaction, building: str, floor: in
 
                 else:
                     await interaction.response.send_message(
-                        f"No free times found for {building} floor {floor} on {day}."
+                        f"No free times found for {building.value.title()} floor {floor} on {day.name}."
                     )
     except Exception as e:
         await interaction.response.send_message(f"An error occurred: {str(e)}")
@@ -180,7 +208,7 @@ async def help(interaction: discord.Interaction):
     await interaction.response.send_message(embed=embed)
 
 @client.tree.command(name="get_room_time", description="Get free times for any individual room in any building")
-async def free_room(interaction: discord.Interaction, building: str, room: str, day: str, min_free_time : str = '30m'):
+async def free_room(interaction: discord.Interaction, building: ValidBuildings, room: str, day: ValidDays, min_free_time : str = '30m'):
 
     try:
         min_free_time = parse_time_input(min_free_time)
@@ -192,9 +220,9 @@ async def free_room(interaction: discord.Interaction, building: str, room: str, 
 
         async with aiohttp.ClientSession() as session:
             params = {
-                'building': building,
+                'building': building.value,
                 'room': room,
-                'day': day,
+                'day': day.value,
                 'min_free_time': min_free_time
             }
             async with session.get(f'{API_BASE_URL}/get_free_room', params=params) as response:
@@ -209,10 +237,10 @@ async def free_room(interaction: discord.Interaction, building: str, room: str, 
                 free_slots = await response.json()
 
                 if free_slots:
-                    print(f"Success on finding classes for {building, room, day}: {free_slots}")
+                    print(f"Success on finding classes for {building.name, room.upper(), day.name}: {free_slots}")
 
                     embed = discord.Embed(
-                        title=f"Free Times for {building.title()} {room.upper()} on {day.capitalize()}",
+                        title=f"Free Times for {building.value.title()} {room.upper()} on {day.name}",
                         color=discord.Color.blue()
                     )
 
@@ -239,7 +267,7 @@ def convert_to_standard_time(military_time):
 
 @client.event
 async def on_ready():
-    prfx = prfx = (Back.BLACK + Fore.GREEN +
+    prfx = (Back.BLACK + Fore.GREEN +
                    time.strftime("%H:%M:%S UTC", time.gmtime()) + Back.RESET + Fore.WHITE +
                    Style.BRIGHT)
     print(prfx + " Logged in as " + Fore.YELLOW + client.user.name)
@@ -261,4 +289,4 @@ async def on_ready():
 
 
 
-client.run(os.getenv("TOKEN2"))
+client.run(os.getenv("TEST_TOKEN"))
