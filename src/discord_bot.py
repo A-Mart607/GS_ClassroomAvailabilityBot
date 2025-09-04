@@ -51,7 +51,7 @@ class ValidDays(enum.Enum):
 
 ADMIN_IDS = os.getenv("ADMIN_IDS", "").split(",")
 ADMIN_IDS = [int(admin_id) for admin_id in ADMIN_IDS]
-API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:5001')
+API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:5000')
 
 client = commands.Bot(command_prefix='%', intents=discord.Intents.all())
 def is_admin():
@@ -289,4 +289,4 @@ async def on_ready():
 
 
 
-client.run(os.getenv("TEST_TOKEN"))
+client.run(os.getenv("TOKEN2"))
